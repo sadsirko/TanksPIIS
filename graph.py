@@ -7,7 +7,7 @@ class Graph_creator:
         self.graph = []
         self.map = map
         self.checked = []
-        self.start = player    
+        self.start = player
         self.queue = []
         #start point also in path
         self.path = []
@@ -67,6 +67,12 @@ class Graph_creator:
     def is_already_checked(self,pos):
         if len(self.path[pos['y']][pos['x']]) > 0:
             return True
+        return False
+
+    def is_already_checked_ucf(self,pos):
+        for i in self.checked:
+            if self.compare_to_pos(pos,i):
+                return True
         return False
 
     def initial_pathes(self):
@@ -147,18 +153,21 @@ class Graph_creator:
                     self.build_way.append(check)
 
     def check_move_ucs(self,check,cur):
+        #if move is acceseble
         if check is not False:
-            if not self.is_already_checked(check):
+            if not self.is_already_checked_ucf(check):
                 # print(self.path[check['y']][check['x']])
                 self.queue.append(check) 
-                self.path[check['y']][check['x']].append(self.queue[0])
-                self.path[check['y']][check['x']] = self.path[check['y']][check['x']] + self.path[cur['y']][cur['x']]
+                if len(self.path[check['y']][check['x']]) - 1 > len(self.path[cur['y']][cur['x']]):
+                    self.path[check['y']][check['x']] = []
+                    self.path[check['y']][check['x']].append(self.queue[0])
+                    self.path[check['y']][check['x']] = self.path[check['y']][check['x']] + self.path[cur['y']][cur['x']]
                 
-                tank = self.is_tank_near({'x': check['x'],'y':check['y']})
-                if tank is not False:
-                    if not self.is_already_in(tank,self.aims):
-                        self.aims.append(tank)
-                        self.build_way.append(check)
+                    tank = self.is_tank_near({'x': check['x'],'y':check['y']})
+                    if tank is not False:
+                        if not self.is_already_in(tank,self.aims):
+                            self.aims.append(tank)
+                            self.build_way.append(check)
     
 
     def BFS_algorithm(self):
@@ -250,13 +259,34 @@ class Graph_creator:
         return self.result
 
     def UCS_algorithm(self):
-        active_node = self.start
+        def get_nearest_from_que():
+            min = 1000000
+            el_num = 0
+            for i in self.queue:
+                if len(self.path[i['y']][i['x']]) < min :
+                    min = len(self.path[i['y']][i['x']])
+                    min_el = el_num
+                el_num = el_num + 1
+            return min_el
+        #what we reurn
+        self.result = []
+        #cells near aims
+        self.build_way = []
 
+        self.checked = []
+        
+        self.path = []
+        
+        self.len = []
+        self.build_way = []
+        self.result = []
         self.initial_pathes()
+    
         #set start position
         self.queue.append(self.start)
         while(len(self.queue) > 0):
-            cur = self.queue[0] 
+            cur_el = get_nearest_from_que()
+            cur = self.queue[cur_el]
             # print(self.queue,"queue")
             check = self.check_move_left(cur)
             self.check_move(check, cur)
@@ -269,8 +299,9 @@ class Graph_creator:
 
             check = self.check_move_down(cur)
             self.check_move(check, cur)
+            self.checked.append(cur)
+            self.queue.pop(cur_el)
 
-            self.queue.remove(self.queue[0])
         countx = 0
         county = 0
         for i in self.path:

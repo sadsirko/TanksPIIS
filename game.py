@@ -119,7 +119,9 @@ class GameController:
     def change_alg(self):
         if self.algorithm == "bfs":
             self.algorithm = "dfs"
-        else:
+        elif self.algorithm == "dfs":
+            self.algorithm = "ufs"
+        elif self.algorithm == "ufs":
             self.algorithm = "bfs"
 
     def run_alg(self,graph):
@@ -164,8 +166,11 @@ class GameController:
             self.drw.draw_back()
             if self.algorithm == "dfs":
                 self.drw.draw_all_ways(graph.DFS_algorithm(),'dfs')
-            else:
+            if self.algorithm == 'bfs':
                 self.drw.draw_all_ways(graph.BFS_algorithm(),'bfs')
+            else:
+                self.drw.draw_all_ways(graph.UCS_algorithm(),'ucs')
+
 
             self.bull_arr["enemy_fire"] = bot_tanks.random_move(self.map.map, self.bull_arr["enemy_fire"])
             if event.type == pg.KEYDOWN:

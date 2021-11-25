@@ -35,6 +35,8 @@ class Drawer:
             cl = (235, 107 + color * 50, 58)
         if alg == "bfs":
             cl = (35, 104 + color * 50, 69 )
+        if alg == 'ucs':
+            cl = (178, 104 + color * 50, 178 )
         pg.draw.rect(self.screen,  cl, 
                  (pos['x'] * BLOCK_SIZE, pos['y'] * BLOCK_SIZE, BLOCK_SIZE * 2, BLOCK_SIZE * 2))
 
