@@ -32,7 +32,7 @@ class Drawer:
     def draw_way_rect(self,pos,color,alg):
         cl = (0,0,0)
         if alg == "dfs":
-            cl = (235, 107 + color * 50, 58)
+            cl = (235, 20, 58)
         if alg == "bfs":
             cl = (35, 104 + color * 50, 69 )
         if alg == 'ucs':

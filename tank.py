@@ -2,6 +2,7 @@ from pygame.constants import TIMER_RESOLUTION
 from const import BANNED_BLOCKS,BIG_BLOCKS,BLOCK_SIZE, COOLDOWN, ZOOM_16
 import time
 from bullet import Bullet
+import random
 
 class Tank:
     def __init__(self,name,pos_x,pos_y,direction = 'up',hp = 4):
@@ -124,5 +125,107 @@ class Tank:
         bul = Bullet(info['pos_x'],info['pos_y'],info["direction"])
         bul_arr.append(bul)
         return bul_arr
-
+ 
+    def random_move_personal(self,map,bul_arr):
+        
+        rand_move  = random.randint(0,10)
+        if rand_move == 0:
+            self.move_up(map)
+        if rand_move == 1:
+            self.move_right(map)
+        if rand_move == 2:
+            self.move_down(map)
+        if rand_move == 3:
+            self.move_left(map)
+        if rand_move == 4:
+            res = self.fire(bul_arr)
+            if res != False:
+                bul_arr = res  
+        return bul_arr
     
+    def is_enemy_ahead(self,map):
+        if self.direction == "up":
+            iter = 0
+            while self.pos['y'] > iter:
+                left_pos = self.pos['x']
+                right_pos = self.pos['x']
+                
+                if self.pos['x'] > 0:
+                    left_pos = self.pos['x'] - 1
+                
+                if self.pos['x'] < BIG_BLOCKS['w'] - 2:
+                    right_pos = self.pos['x'] + 1
+
+                one_line = map[iter][self.pos['x']]
+                left_line = map[iter][left_pos]
+                right_line = map[iter][right_pos]
+                iter = iter + 1
+                if one_line == "-" or left_line == "-" or right_line == "-":
+                    return True
+
+        if self.direction == "down":
+            iter = BIG_BLOCKS['h'] - 2
+            while self.pos['y'] < iter:
+                left_pos = self.pos['x']
+                right_pos = self.pos['x']
+                
+                if self.pos['x'] > 0:
+                    left_pos = self.pos['x'] - 1
+                
+                if self.pos['x'] < BIG_BLOCKS['w'] - 2:
+                    right_pos = self.pos['x'] + 1
+
+                one_line = map[iter][self.pos['x']]
+                left_line = map[iter][left_pos]
+                right_line = map[iter][right_pos]
+                iter = iter - 1
+                if one_line == "-" or left_line == "-" or right_line == "-":
+                    return True
+
+        if self.direction == "right":
+            iter = BIG_BLOCKS['w'] - 2
+            while self.pos['x'] < iter:
+                up_pos = self.pos['y']
+                down_pos = self.pos['y']
+        
+                if self.pos['y'] > 0:
+                    up_pos = self.pos['y'] - 1
+                
+                if self.pos['y'] < BIG_BLOCKS['h'] - 2:
+                    down_pos = self.pos['y'] + 1
+
+                one_line = map[self.pos['y']][iter]
+                left_line = map[up_pos][iter]
+                right_line = map[down_pos][iter]
+                iter = iter - 1
+                if one_line == "-" or left_line == "-" or right_line == "-":
+                    return True
+                    
+        if self.direction == "left":
+            iter = 0
+            while self.pos['x'] > iter:
+                up_pos = self.pos['y']
+                down_pos = self.pos['y']
+        
+                if self.pos['y'] > 0:
+                    up_pos = self.pos['y'] - 1
+                
+                if self.pos['y'] < BIG_BLOCKS['h'] - 2:
+                    down_pos = self.pos['y'] + 1
+
+                one_line = map[self.pos['y']][iter]
+                left_line = map[up_pos][iter]
+                right_line = map[down_pos][iter]
+                iter = iter + 1
+                if one_line == "-" or left_line == "-" or right_line == "-":
+                    return True
+   
+
+    def fire_if_enemy_line(self,bull_arr,map):
+        res = False
+        if self.is_enemy_ahead(map):
+            res = self.fire(bull_arr["player_fire"])              
+            if res != False:
+                return res  
+        return res
+        

@@ -1,9 +1,10 @@
-
+import random
+from math import sqrt
 from sys import path
 from const import BANNED_BLOCKS,BIG_BLOCKS, PATH_LEVEL
-
+import time
 class Graph_creator:
-    def __init__(self,map,player,enemy):
+    def __init__(self,map,player,enemy,allies):
         self.graph = []
         self.map = map
         self.checked = []
@@ -12,11 +13,12 @@ class Graph_creator:
         #start point also in path
         self.path = []
         self.len = []
-        self.aims = [player]
+        self.aims = []
+        self.allies = allies
         self.enemy = enemy
         self.build_way = []
         self.result = []
-
+        self.iteration = 0
     def compare_to_pos(self,pos_1,pos_2):
         if pos_1['x'] == pos_2['x'] and pos_1['y'] == pos_2['y']:
             return True
@@ -57,6 +59,52 @@ class Graph_creator:
             if self.map[pos['y'] + 1][pos['x'] - 2] == '+':
                 return {"y":pos['y'] + 1,"x": pos['x'] - 2}
         return False
+
+    def is_aim_near(self,pos,aim):
+        #check up
+        if pos['y'] > 1 and  pos['x'] < BIG_BLOCKS['w'] - 1 :
+            if pos['y'] -1 == aim['y'] and  pos['x'] == aim['x']:
+                # print(1)
+                # print({"y":pos['y'],"x": pos['x']})
+                return {"y":pos['y'] - 1,"x": pos['x']}
+
+        #check right
+        if pos['x'] < BIG_BLOCKS['w'] - 2 and pos['y'] < BIG_BLOCKS['h'] - 2:
+            if pos['y'] == aim['y'] and pos['x'] + 1 == aim['x']: 
+                # print(2)
+                # print({"y":pos['y'],"x": pos['x']})
+                return { "y":pos['y'],"x": pos['x'] + 1}
+
+
+        #check down
+        if pos['y'] < BIG_BLOCKS['h'] - 3 and pos['x'] < BIG_BLOCKS['w'] - 2:
+            if pos['y'] + 1 == aim['y'] and pos['x']     == aim['x']: 
+                # print(3)
+                # print({"y":pos['y'],"x": pos['x']})
+                return { "y":pos['y'] + 1, "x": pos['x']}
+
+
+        #check left
+        if pos['x'] > 1 and pos['y'] < BIG_BLOCKS['h'] - 1:
+            if pos['y'] == aim['y'] and pos['x'] - 1  == aim['x']: 
+                # print(4)                
+                # print({"y":pos['y'],"x": pos['x']})
+                return { "y":pos['y'],"x": pos['x'] - 1} 
+        return False
+
+    def choose_node_astar(self, aim ):
+        el = 0
+        min_el = 0
+        min = 100000000
+        for i in self.queue:
+            print(aim)
+            print(i)
+            dist = sqrt((aim['x'] - i['x'])**2 + (aim['y'] - i['y'])**2)
+            if min < dist:
+                min = dist
+                min_el = el
+            el = el + 1
+        return min_el     
 
     def from_pos_to_num(self, pos):
         return pos['y'] * BIG_BLOCKS['h'] + pos['x']
@@ -117,17 +165,15 @@ class Graph_creator:
         x = pos['x']
         y = pos['y']
         if x - 1  >= 0:
-            # print(y,x)
             a = self.map[y][x - 1]
             b = self.map[y + 1][x - 1]
             if not(a in BANNED_BLOCKS or b in BANNED_BLOCKS):
                 return {'x': x - 1, "y" : y}
         return False
 
-    def check_move(self,check,cur):
+    def check_move_bfs(self,check,cur):
         if check is not False:
             if not self.is_already_checked(check):
-                # print(self.path[check['y']][check['x']])
                 self.queue.append(check) 
                 self.path[check['y']][check['x']].append(self.queue[0])
                 self.path[check['y']][check['x']] = self.path[check['y']][check['x']] + self.path[cur['y']][cur['x']]
@@ -138,8 +184,31 @@ class Graph_creator:
                         self.aims.append(tank)
                         self.build_way.append(check)
 
+    def check_move_astar(self,check,cur,aim):
+        if check is not False:
+            if not self.is_already_checked(check):
+                self.queue.append(check) 
+                self.path[check['y']][check['x']].append(check)
+                self.path[check['y']][check['x']] = self.path[check['y']][check['x']] + self.path[cur['y']][cur['x']]
+                
+                aim_here = self.is_aim_near(cur,aim)
+                if aim_here is not False:
+                    # print('check',check)
+                    # print('aim',aim)
+                    self.path[aim['y']][aim['x']].append(aim)
+                    self.path[aim['y']][aim['x']] = self.path[aim['y']][aim['x']] + self.path[cur['y']][cur['x']]
+                    self.build_way.append(aim)
+                else:
+                    aim_there = self.is_aim_near(check,aim)
+                    if aim_there is not False:
+                        # print('check',check)
+                        # print('aim',aim)
+                        self.path[aim['y']][aim['x']].append(aim)
+                        self.path[aim['y']][aim['x']] = self.path[aim['y']][aim['x']] + self.path[check['y']][check['x']]
+                        self.build_way.append(aim)
+
     def check_move_dfs(self,check,cur):
-        # if not self.is_already_checked(check):
+        if not self.is_already_checked(check):
             # print(self.path[check['y']][check['x']])
             self.queue.append(check) 
             self.path[check['y']][check['x']].append(self.queue[len(self.queue) - 1])
@@ -169,33 +238,36 @@ class Graph_creator:
                             self.aims.append(tank)
                             self.build_way.append(check)
     
-
     def BFS_algorithm(self):
+        self.iteration = 0
         self.result = []
         self.build_way = []
         self.checked = []
         self.path = []
         self.len = []
         self.build_way = []
-        self.result = []
         self.initial_pathes()
-
+        for i in self.allies:
+            self.aims.append(i.pos)
         #set start position
         self.queue.append(self.start)
         while(len(self.queue) > 0):
+            if len(self.aims) < 4:
+                self.iteration = self.iteration + 1
+
             cur = self.queue[0] 
             # print(self.queue,"queue")
             check = self.check_move_left(cur)
-            self.check_move(check, cur)
+            self.check_move_bfs(check, cur)
 
             check = self.check_move_up(cur)
-            self.check_move(check, cur)
+            self.check_move_bfs(check, cur)
                     
             check = self.check_move_right(cur)
-            self.check_move(check, cur)
+            self.check_move_bfs(check, cur)
 
             check = self.check_move_down(cur)
-            self.check_move(check, cur)
+            self.check_move_bfs(check, cur)
 
             self.queue.remove(self.queue[0])
         countx = 0
@@ -208,54 +280,7 @@ class Graph_creator:
             county = county + 1
         for i in self.build_way:
             self.result.append(self.path[i['y']][i['x']])
-        return self.result
-
-    def DFS_algorithm(self):
-        self.result = []
-        self.build_way = []
-        self.checked = []
-        self.path = []
-        self.len = []
-        self.build_way = []
-        self.result = []
-        self.initial_pathes()
-        self.queue.append(self.start)
-        while(len(self.queue) > 0):
-            # print(self.queue)
-            cur = self.queue[len(self.queue) - 1] 
-            check_up = self.check_move_up(cur)
-            if check_up is not False and not self.is_already_checked(check_up):
-                    self.check_move_dfs(check_up, cur)
-            else:    
-                check_left = self.check_move_left(cur)
-                if check_left is not False and not self.is_already_checked(check_left):
-                        self.check_move_dfs(check_left, cur)
-                else:            
-                    check_right = self.check_move_right(cur)
-                    if check_right is not False and not self.is_already_checked(check_right):
-                            self.check_move_dfs(check_right, cur)
-                    else:
-                        check_down = self.check_move_down(cur)
-                        if check_down is not False and not self.is_already_checked(check_down):
-                                self.check_move_dfs(check_down, cur)
-                        else:
-                            self.queue.pop()
-        countx = 0
-        county = 0
-        for i in self.path:
-            for j in i:
-                self.len[county][countx] = len(j)
-                countx = countx + 1
-            countx = 0
-            county = county + 1
-        # for k in self.len:
-        #     print(k)
-        # print(self.build_way)
-
-        for i in self.build_way:
-            self.result.append(self.path[i['y']][i['x']])
-        # print(self.result)
-        
+        # print(self.iteration)
         return self.result
 
     def UCS_algorithm(self):
@@ -268,15 +293,13 @@ class Graph_creator:
                     min_el = el_num
                 el_num = el_num + 1
             return min_el
+        self.iteration = 0
         #what we reurn
         self.result = []
         #cells near aims
         self.build_way = []
-
         self.checked = []
-        
         self.path = []
-        
         self.len = []
         self.build_way = []
         self.result = []
@@ -285,23 +308,32 @@ class Graph_creator:
         #set start position
         self.queue.append(self.start)
         while(len(self.queue) > 0):
+            if len(self.aims) < 4:
+                self.iteration = self.iteration + 1
             cur_el = get_nearest_from_que()
             cur = self.queue[cur_el]
+            # print('current:' ,cur)
+            # print('len',len(self.path[cur['y']][cur['x']]))
+            
+            # print('queue',self.queue)
+            
+            # print('checked',self.checked)
+
             # print(self.queue,"queue")
             check = self.check_move_left(cur)
-            self.check_move(check, cur)
+            self.check_move_ucs(check, cur)
 
             check = self.check_move_up(cur)
-            self.check_move(check, cur)
+            self.check_move_ucs(check, cur)
                     
             check = self.check_move_right(cur)
-            self.check_move(check, cur)
+            self.check_move_ucs(check, cur)
 
             check = self.check_move_down(cur)
-            self.check_move(check, cur)
+            self.check_move_ucs(check, cur)
             self.checked.append(cur)
             self.queue.pop(cur_el)
-
+            time.sleep(1)
         countx = 0
         county = 0
         for i in self.path:
@@ -312,4 +344,65 @@ class Graph_creator:
             county = county + 1
         for i in self.build_way:
             self.result.append(self.path[i['y']][i['x']])
+        # print(self.iteration)
+        return self.result
+
+    def get_rand_point(self):
+        iterations = 0
+        is_reacheble = False
+        while not is_reacheble:
+            rand_y = random.randint(0,BIG_BLOCKS['h'] - 2)
+            rand_x = random.randint(0,BIG_BLOCKS['w'] - 2)
+
+            if len(self.path[rand_y][rand_x]) > 2:
+                return {"x":rand_x,"y":rand_y}
+            iterations = iterations + 1
+            if iterations == 10000:
+                return {'x':15,'y': 24}
+
+
+    def ASTAR_algorithm(self,aim):
+        aim_founded = False
+        self.result = []
+        self.build_way = []
+        self.checked = []
+        self.path = []
+        self.len = []
+        self.build_way = []
+        self.initial_pathes()
+        for i in self.allies:
+            self.aims.append(i.pos)
+        #set start position
+        self.queue.append(self.start)
+        while(len(self.queue) > 0 and not aim_founded):
+
+            cur_el = self.choose_node_astar(aim) 
+            cur = self.queue[cur_el]
+            check = self.check_move_left(cur)
+            self.check_move_astar(check, cur, aim)
+
+            check = self.check_move_up(cur)
+            self.check_move_astar(check, cur, aim)
+                    
+            check = self.check_move_right(cur)
+            self.check_move_astar(check, cur, aim)
+
+            check = self.check_move_down(cur)
+            self.check_move_astar(check, cur, aim)
+
+            self.queue.remove(cur)
+
+            if len(self.build_way) > 0:
+                aim_founded = True 
+        countx = 0
+        county = 0
+        for i in self.path:
+            for j in i:
+                self.len[county][countx] = len(j)
+                countx = countx + 1
+            countx = 0
+            county = county + 1
+        for i in self.build_way:
+            self.result.append(self.path[i['y']][i['x']])
+        # print(self.iteration)
         return self.result

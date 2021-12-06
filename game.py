@@ -1,4 +1,5 @@
 
+from random import Random
 import pygame as pg
 from const import BLOCK_SIZE, SCREEN_SIZE, Color, FPS
 from drawer import Drawer
@@ -7,7 +8,7 @@ from tank import Tank
 import sys
 from bot import Bot
 from graph import Graph_creator
-
+import random
 
 class GameController:
     def __init__(self):
@@ -23,8 +24,11 @@ class GameController:
         self.bull_gr = pg.sprite.Group()
         self.tank_gr = pg.sprite.Group()
         self.algorithm = "bfs"
-        self.tank_stack_en = [Tank('A',0,0),Tank('C',10,0),Tank('D',14,0)]
-        self.tank_stack = [Tank('P1',9,24,'up'),Tank('P1',9,24,'up')]
+        self.tank_stack_en = [Tank('A',5,0),Tank('C',12,0),Tank('D',16,0)]
+        self.tank_stack = [Tank('P1',9,24,'up'),Tank('P1',9,24,'up'),Tank('P1',9,24,'up'),Tank('P1',9,24,'up'),Tank('P1',9,24,'up'),Tank('P1',9,24,'up')]
+        self.graph_bot_arr = []
+        self.aims = [{'x':15,'y': 24}]
+    
     def set_tanks(self,arr_pl,arr_bot,map):
         for pl in arr_pl:
             map = pl.set_tank(map)
@@ -118,20 +122,9 @@ class GameController:
             
     def change_alg(self):
         if self.algorithm == "bfs":
-            self.algorithm = "dfs"
-        elif self.algorithm == "dfs":
             self.algorithm = "ufs"
         elif self.algorithm == "ufs":
             self.algorithm = "bfs"
-
-    def run_alg(self,graph):
-        # print(self.algorithm)
-        if self.algorithm == "dfs":
-            # print(graph.DFS_algorithm())
-            self.drw.draw_all_ways(graph.DFS_algorithm(),'dfs')
-        else:
-            # print(graph.BFS_algorithm())
-            self.drw.draw_all_ways(graph.BFS_algorithm(),'bfs')
 
     def refil_tanks(self):
         if len(self.tank_arr['enemy_arr']) <3 and len(self.tank_stack_en)>0:
@@ -140,7 +133,6 @@ class GameController:
         if len(self.tank_arr['player_1']) <1 and len(self.tank_stack)>0:
             self.tank_arr['player_1'].append(self.tank_stack.pop())
 
-
     def game_loop(self):
 
         # self.map.read_map(str(self.lvl))
@@ -148,7 +140,8 @@ class GameController:
         
         self.tank_arr={
             'player_1': [Tank('P1',9,24,'up')],
-            'enemy_arr':[Tank('A',5,0),Tank('C',12,0),Tank('D',16,0)]
+            'enemy_arr':[Tank('A',5,0),Tank('C',12,0),Tank('D',16,0)],
+
             }
         self.bull_arr={'enemy_fire':[],'player_fire':[]}
         #set on map    
@@ -157,22 +150,89 @@ class GameController:
         bot_tanks = Bot(self.tank_arr["enemy_arr"])
         while True:
             self.refil_tanks()
-            graph = Graph_creator(self.map.map, self.tank_arr['player_1'][0].pos,self.tank_arr["enemy_arr"])
-            
+
             for event in pg.event.get():
-                if event.type == pg.QUIT:
+                if event.type == pg.QUIT or len(self.tank_arr["player_1"])  == 0 or len(self.tank_arr["enemy_arr"])  == 0:
                     pg.quit()
                     sys.exit()
             self.drw.draw_back()
-            if self.algorithm == "dfs":
-                self.drw.draw_all_ways(graph.DFS_algorithm(),'dfs')
-            if self.algorithm == 'bfs':
-                self.drw.draw_all_ways(graph.BFS_algorithm(),'bfs')
-            else:
-                self.drw.draw_all_ways(graph.UCS_algorithm(),'ucs')
+            
+            for i in self.tank_arr["enemy_arr"]:
+                gr = Graph_creator(self.map.map, i.pos, [self.tank_arr['player_1']],self.tank_arr['enemy_arr'])
+                way = gr.BFS_algorithm()
+                self.drw.draw_all_ways(way,'bfs')
+                last = i.pos
+                previuos =  last      
+                for k in way:
+                    for j in k:
+                        previuos = last
+                        last = j
+                # print(previuos)     
+                #put here how to move 
+                if len(way) > 0:
+                    x_m = i.pos['x'] - previuos['x']
+                    y_m = i.pos['y'] - previuos['y']
+                    rand_move  = random.randint(0,10)
+                    if rand_move > 5:
+                        if  x_m == -1 and y_m == 0:
+                            i.move_right(self.map.map)
+                        if  x_m == 1 and y_m == 0:
+                            i.move_left(self.map.map)
+                        if  x_m == 0 and y_m == -1:
+                            i.move_down(self.map.map)
+                        if  x_m == 0 and y_m == 1:
+                            i.move_up(self.map.map)
+                    if rand_move < 3:
+                        res = i.fire(self.bull_arr['enemy_fire'])
+                        if res != False:
+                            self.bull_arr['enemy_fire'] = res
+
+                else:
+                    self.bull_arr["enemy_fire"] =  i.random_move_personal(self.map.map,self.bull_arr["enemy_fire"])
+            
+            if len(self.tank_arr["player_1"]) > 0:
+                
+                res = self.tank_arr['player_1'][0].fire_if_enemy_line(self.bull_arr,self.map.map)
+                if res != False:
+                    print("fire on line")
+                    self.bull_arr["player_fire"] = res
+                
+                graph = Graph_creator(self.map.map, self.tank_arr['player_1'][0].pos,self.tank_arr["enemy_arr"],[self.tank_arr['player_1'][0]])
+                way = graph.ASTAR_algorithm(self.aims[len(self.aims) - 1])
+                if len(self.aims) < 10:
+                    self.aims.append(graph.get_rand_point())
+                if len(way) == 0:
+                    self.bull_arr["player_fire"] =  self.tank_arr["player_1"][0].random_move_personal(self.map.map,self.bull_arr["player_fire"])
+                else:
+                    self.drw.draw_all_ways(way,'ucs')
+                    player = self.tank_arr['player_1'][0]
+                    if player.pos['x'] == self.aims[len(self.aims) - 1]['x'] and player.pos['y'] == self.aims[len(self.aims) - 1]['y']:
+                        self.aims.pop()
+                        print("succsess")
+                    last = player.pos
+                    previuos =  last      
+                    for k in way:
+                        for j in k:
+                            previuos = last
+                            last = j
+                    # previuos = way[len(way) - 1]
+                    previuos = last
+
+                    if len(way) > 0:
+                        x_m = player.pos['x'] - previuos['x']
+                        y_m = player.pos['y'] - previuos['y']
+                        rand_move  = random.randint(0,10)
+                        if rand_move > 1:
+                            if  x_m == -1 and y_m == 0:
+                                player.move_right(self.map.map)
+                            if  x_m == 1 and y_m == 0:
+                                player.move_left(self.map.map)
+                            if  x_m == 0 and y_m == -1:
+                                player.move_down(self.map.map)
+                            if  x_m == 0 and y_m == 1:
+                                player.move_up(self.map.map)
 
 
-            self.bull_arr["enemy_fire"] = bot_tanks.random_move(self.map.map, self.bull_arr["enemy_fire"])
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_LEFT:
                     self.map.map = self.tank_arr["player_1"][0].move_left(self.map.map)
