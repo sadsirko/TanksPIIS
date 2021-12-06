@@ -97,9 +97,7 @@ class Graph_creator:
         min_el = 0
         min = 100000000
         for i in self.queue:
-            print(aim)
-            print(i)
-            dist = sqrt((aim['x'] - i['x'])**2 + (aim['y'] - i['y'])**2)
+            dist = sqrt((aim['x'] - i['x'])**2 + (aim['y'] - i['y'])**2) + len(self.path[i['y']][i['x']])
             if min < dist:
                 min = dist
                 min_el = el
@@ -404,5 +402,4 @@ class Graph_creator:
             county = county + 1
         for i in self.build_way:
             self.result.append(self.path[i['y']][i['x']])
-        # print(self.iteration)
         return self.result

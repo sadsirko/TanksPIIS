@@ -160,7 +160,7 @@ class Tank:
                 left_line = map[iter][left_pos]
                 right_line = map[iter][right_pos]
                 iter = iter + 1
-                if one_line == "-" or left_line == "-" or right_line == "-":
+                if one_line == "+" or left_line == "+" or right_line == "+":
                     return True
 
         if self.direction == "down":
@@ -179,7 +179,7 @@ class Tank:
                 left_line = map[iter][left_pos]
                 right_line = map[iter][right_pos]
                 iter = iter - 1
-                if one_line == "-" or left_line == "-" or right_line == "-":
+                if one_line == "+" or left_line == "+" or right_line == "+":
                     return True
 
         if self.direction == "right":
@@ -198,7 +198,7 @@ class Tank:
                 left_line = map[up_pos][iter]
                 right_line = map[down_pos][iter]
                 iter = iter - 1
-                if one_line == "-" or left_line == "-" or right_line == "-":
+                if one_line == "+" or left_line == "+" or right_line == "+":
                     return True
                     
         if self.direction == "left":

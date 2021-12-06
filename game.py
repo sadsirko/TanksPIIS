@@ -27,7 +27,7 @@ class GameController:
         self.tank_stack_en = [Tank('A',5,0),Tank('C',12,0),Tank('D',16,0)]
         self.tank_stack = [Tank('P1',9,24,'up'),Tank('P1',9,24,'up'),Tank('P1',9,24,'up'),Tank('P1',9,24,'up'),Tank('P1',9,24,'up'),Tank('P1',9,24,'up')]
         self.graph_bot_arr = []
-        self.aims = [{'x':15,'y': 24}]
+        self.aims = [{'x':0,'y': 0}]
     
     def set_tanks(self,arr_pl,arr_bot,map):
         for pl in arr_pl:
@@ -61,31 +61,36 @@ class GameController:
                 self.drw.draw_bullet(i)        
 
     def destruction(self,pos):
+        
         x = int(pos['x'] // BLOCK_SIZE)
         y = int(pos['y']// BLOCK_SIZE)
-        cell = self.map.map[y][x]
-        if  cell == "#":
-            self.map.map[y][x] = '.'
+        try:
+            cell = self.map.map[y][x]
+            if  cell == "#":
+                self.map.map[y][x] = '.'
 
-        if cell == "+" or cell == "-":
-            tank_en = self.check_what_enemy_tank({"x":x,"y":y}) 
-            if tank_en != False:
-                tank_en.unset_tank(self.map.map)
-                self.tank_arr["enemy_arr"].remove(tank_en) 
-    
+            if cell == "+" or cell == "-":
+                tank_en = self.check_what_enemy_tank({"x":x,"y":y}) 
+                if tank_en != False:
+                    tank_en.unset_tank(self.map.map)
+                    self.tank_arr["enemy_arr"].remove(tank_en) 
+        except LookupError:
+            print(pos)
     def destruction_bot(self,pos):
         x = int(pos['x'] // BLOCK_SIZE)
         y = int(pos['y']// BLOCK_SIZE)
-        cell = self.map.map[y][x]
-        if  cell == "#":
-            self.map.map[y][x] = '.'
+        try:
+            cell = self.map.map[y][x]
+            if  cell == "#":
+                self.map.map[y][x] = '.'
 
-        if cell == "+" or cell == "-":
-            tank_en = self.check_what_player_tank({"x":x,"y":y}) 
-            if tank_en != False:
-                tank_en.unset_tank(self.map.map)
-                self.tank_arr["player_1"].remove(tank_en) 
-    
+            if cell == "+" or cell == "-":
+                tank_en = self.check_what_player_tank({"x":x,"y":y}) 
+                if tank_en != False:
+                    tank_en.unset_tank(self.map.map)
+                    self.tank_arr["player_1"].remove(tank_en) 
+        except LookupError:
+            print(pos)
     def compare_pos(self,pos1,pos2):
         if pos1['x'] == pos2['x'] and pos1['y'] == pos2['y']:
             return True
@@ -194,12 +199,11 @@ class GameController:
                 
                 res = self.tank_arr['player_1'][0].fire_if_enemy_line(self.bull_arr,self.map.map)
                 if res != False:
-                    print("fire on line")
                     self.bull_arr["player_fire"] = res
                 
                 graph = Graph_creator(self.map.map, self.tank_arr['player_1'][0].pos,self.tank_arr["enemy_arr"],[self.tank_arr['player_1'][0]])
                 way = graph.ASTAR_algorithm(self.aims[len(self.aims) - 1])
-                if len(self.aims) < 10:
+                if len(self.aims) < 2:
                     self.aims.append(graph.get_rand_point())
                 if len(way) == 0:
                     self.bull_arr["player_fire"] =  self.tank_arr["player_1"][0].random_move_personal(self.map.map,self.bull_arr["player_fire"])
@@ -207,7 +211,9 @@ class GameController:
                     self.drw.draw_all_ways(way,'ucs')
                     player = self.tank_arr['player_1'][0]
                     if player.pos['x'] == self.aims[len(self.aims) - 1]['x'] and player.pos['y'] == self.aims[len(self.aims) - 1]['y']:
-                        self.aims.pop()
+                        print(player.pos,self.aims[len(self.aims) - 1])
+                        print(self.aims)
+                        self.aims.pop(len(self.aims) - 1)
                         print("succsess")
                     last = player.pos
                     previuos =  last      
